@@ -1,3 +1,9 @@
 {
-  "cSpell.words": ["Chakra", "epub", "signup", "supabase"]
+  "cSpell.words": [
+    "Chakra",
+    "epub",
+    "signup",
+    "supabase"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

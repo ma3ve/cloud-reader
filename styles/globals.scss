@@ -1,0 +1,15 @@
+.bookDisplay {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  img {
+    width: 100% !important;
+    height: auto !important;
+    position: relative !important;
+    object-fit: contain !important; // Optional
+  }
+  .authorName {
+    margin-top: 0px;
+  }
+}

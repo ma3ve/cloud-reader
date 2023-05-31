@@ -1,32 +1,36 @@
-import { createBrowserSupabaseClient, createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import {
+  createBrowserSupabaseClient,
+  createServerSupabaseClient,
+} from '@supabase/auth-helpers-nextjs'
 import { Session } from '@supabase/supabase-js'
 
-const supabase = createBrowserSupabaseClient();
-
+const supabase = createBrowserSupabaseClient()
 
 export type ProtectRouteSession = {
-  user: Session['user'],
+  user: Session['user']
   initialSession: Session
 }
 export const getUserSessionElseRedirect = async (context: any) => {
-  const supabase = createServerSupabaseClient(context);
+  const supabaseServer = createServerSupabaseClient(context)
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabaseServer.auth.getSession()
   if (!session)
     return {
       redirect: {
-        destination: "/login",
+        destination: '/login',
         permanent: false,
       },
-    };
+      supabaseServer,
+    }
 
   return {
     props: {
       initialSession: session,
       user: session.user,
     },
-  };
-};
+    supabaseServer,
+  }
+}
 
 export default supabase

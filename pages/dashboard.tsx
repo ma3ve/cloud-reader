@@ -1,83 +1,107 @@
-import Navbar from "@/components/Navbar";
+import Navbar from '@/components/Navbar'
 import supabase, {
   getUserSessionElseRedirect,
   ProtectRouteSession,
-} from "@/supabaseClient";
-import React, { useState } from "react";
-import Upload from "@/components/Upload";
-import { Container, Flex, Stack } from "@chakra-ui/react";
-import Spinner from "@/components/Spinner";
-import ePub from "epubjs";
-import { blobUrlToArrayBuffer } from "@/utils";
+} from '@/supabaseClient'
+import React, { useState, useEffect } from 'react'
+import Upload from '@/components/Upload'
+import { Container, Flex, HStack, Stack } from '@chakra-ui/react'
+import Spinner from '@/components/Spinner'
+import ePub from 'epubjs'
+import { blobUrlToArrayBuffer, convertFilePathToUrl, showError } from '@/utils'
+import { User, PostgrestError, SupabaseClient } from '@supabase/supabase-js'
+import { Ebook } from '@/database'
+import BookDisplay from '@/components/BookDisplay'
+import { createBook, getBooks } from '@/ebook'
 
-type Props = {} & ProtectRouteSession;
+type Props = {
+  ebooks: Ebook[]
+  error?: PostgrestError
+} & ProtectRouteSession
 
-function Dashboard({ user }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+// const fetchEbooks = async (supabase: SupabaseClient) => {
+//   const { data, error } = await supabase.from('Ebooks').select(`*`)
+//   if (data) {
+//     return convertFilePathToUrl(data as Ebook[], supabase)
+//   }
+//   return { ebooks: [], error }
+// }
+
+function Dashboard({ user, ebooks: Eebooks, error }: Props) {
+  const [loading, setLoading] = useState(false)
+  const [ebooks, setEbooks] = useState<Ebook[]>([])
+
+  useEffect(() => {
+    setEbooks(Eebooks)
+  }, [Eebooks])
+
+  useEffect(() => {
+    if (error) showError(error.message)
+  }, [error])
 
   const onNewEbook = async (book: ArrayBuffer) => {
     try {
-      setLoading(true);
-      const promiseBook = supabase.storage
-        .from("ebooks")
-        .upload(`${user.id}/${Date.now()}/ebook.epub`, book, {
-          contentType: "application/epub+zip",
-        });
-
-      const epub = ePub(book);
-      const cover = await epub.coverUrl();
-      const metaData = await epub.loaded.metadata;
-      const author = metaData.creator;
-      const title = metaData.title;
-      let promiseCover: Promise<any> | undefined = undefined;
-      if (cover) {
-        const coverArrayBuffer = await blobUrlToArrayBuffer(cover);
-        promiseCover = supabase.storage
-          .from("ebooks")
-          .upload(`${user.id}/${Date.now()}/cover.jpg`, coverArrayBuffer, {
-            contentType: "image/jpeg",
-          });
-      }
-      Promise.all([promiseBook, promiseCover])
-        .then((values) => {
-          const bookUrl = values[0].data?.path;
-          const coverUrl = values[1]?.data?.path;
-          return supabase.from("Ebooks").insert({
-            book: bookUrl,
-            cover: coverUrl,
-            author,
-            title,
-            user: user.id,
-          });
-        })
-        .then((data) => {
-          console.log(data);
-        })
-        .catch((error) => {
-          console.log(error);
-        })
-        .finally(() => setLoading(false));
+      setLoading(true)
+      const { data, error } = await createBook(book, user)
+      if (error) return showError(error.message)
+      setEbooks([...ebooks, ...data])
     } catch (error) {
-      setError("something went wrong");
+      showError('Something went wrong')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
+
+  const onDelete = async (ebook: Ebook) => {
+    try {
+      console.log({ ebook })
+    } catch (error) {
+      showError('Something went wrong')
+    }
+  }
+
   return (
     <>
       <Navbar />
       <Container maxW="container.xl">
+        <Upload onNewEbook={onNewEbook} onlyUpload />
         <Spinner loading={loading}>
-          <Flex justify="center">
-            <Stack maxW="90%" w="4xl">
-              <Upload onNewEbook={onNewEbook} />
+          <Stack>
+            {!ebooks.length && <Upload onNewEbook={onNewEbook} />}
+            <Stack
+              display="flex"
+              flexDir="row"
+              align="flex-end"
+              justify="start"
+              flexWrap="wrap"
+              spacing={4}
+            >
+              {ebooks.map((ebook) => (
+                <Stack key={ebook.id}>
+                  <BookDisplay ebook={ebook} />
+                </Stack>
+              ))}
             </Stack>
-          </Flex>
+          </Stack>
         </Spinner>
       </Container>
     </>
-  );
+  )
 }
 
-export const getServerSideProps = getUserSessionElseRedirect;
+export const getServerSideProps = async (context: any) => {
+  const { props, redirect, supabaseServer } = await getUserSessionElseRedirect(
+    context
+  )
+  if (redirect) return { redirect }
+  const { ebooks, error } = await getBooks(supabaseServer)
+  return {
+    props: {
+      ...props,
+      ebooks,
+      error,
+    },
+  }
+}
 
-export default Dashboard;
+export default Dashboard
