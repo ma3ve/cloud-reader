@@ -39,3 +39,10 @@ export const convertFilePathToUrl = async (
     error,
   }
 }
+
+export const getResourceUrlFromSignedUrl = (signedUrl: string) => {
+  const EBOOK_BUCKET = '/storage/v1/object/sign/ebooks/'
+  const url = new URL(signedUrl)
+  const resourceUrl = url.pathname.split(EBOOK_BUCKET)[1]
+  return resourceUrl
+}

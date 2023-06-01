@@ -12,20 +12,12 @@ import { blobUrlToArrayBuffer, convertFilePathToUrl, showError } from '@/utils'
 import { User, PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import { Ebook } from '@/database'
 import BookDisplay from '@/components/BookDisplay'
-import { createBook, getBooks } from '@/ebook'
+import { createBook, deleteBook, getBooks } from '@/ebook'
 
 type Props = {
   ebooks: Ebook[]
   error?: PostgrestError
 } & ProtectRouteSession
-
-// const fetchEbooks = async (supabase: SupabaseClient) => {
-//   const { data, error } = await supabase.from('Ebooks').select(`*`)
-//   if (data) {
-//     return convertFilePathToUrl(data as Ebook[], supabase)
-//   }
-//   return { ebooks: [], error }
-// }
 
 function Dashboard({ user, ebooks: Eebooks, error }: Props) {
   const [loading, setLoading] = useState(false)
@@ -54,7 +46,8 @@ function Dashboard({ user, ebooks: Eebooks, error }: Props) {
 
   const onDelete = async (ebook: Ebook) => {
     try {
-      console.log({ ebook })
+      await deleteBook(ebook)
+      setEbooks(ebooks.filter((e) => e.id !== ebook.id))
     } catch (error) {
       showError('Something went wrong')
     }
@@ -72,13 +65,13 @@ function Dashboard({ user, ebooks: Eebooks, error }: Props) {
               display="flex"
               flexDir="row"
               align="flex-end"
-              justify="start"
+              justify="space-evenly"
               flexWrap="wrap"
               spacing={4}
             >
               {ebooks.map((ebook) => (
                 <Stack key={ebook.id}>
-                  <BookDisplay ebook={ebook} />
+                  <BookDisplay ebook={ebook} onDelete={onDelete} />
                 </Stack>
               ))}
             </Stack>

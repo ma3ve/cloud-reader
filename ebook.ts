@@ -1,7 +1,11 @@
 import { SupabaseClient, User } from '@supabase/supabase-js'
 import ePub from 'epubjs'
 import { Ebook } from './database'
-import { blobUrlToArrayBuffer, convertFilePathToUrl } from './utils'
+import {
+  blobUrlToArrayBuffer,
+  convertFilePathToUrl,
+  getResourceUrlFromSignedUrl,
+} from './utils'
 import supabase from './supabaseClient'
 
 export const getBooks = async (supabaseClient: SupabaseClient = supabase) => {
@@ -71,5 +75,12 @@ export const deleteBook = async (book: Ebook) => {
     .delete()
     .eq('id', book.id)
   if (deleteError) return { error: deleteError, data: undefined }
+
+  const coverResource = getResourceUrlFromSignedUrl(book.cover)
+  const bookResource = getResourceUrlFromSignedUrl(book.book)
+
+  const { error: deleteResourceError } = await supabase.storage
+    .from('ebooks')
+    .remove([coverResource, bookResource])
   return { error: undefined, data: book }
 }
